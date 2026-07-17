@@ -1,0 +1,62 @@
+---
+# ============================================================================
+# RENDER / INVARIANT TESTS
+# ----------------------------------------------------------------------------
+# Runs locally and in CI. No root, no writes outside a tmpdir. Every brick
+# that ships or generates a file gets its invariants pinned here: the
+# findings paid for with real bugs become executable assertions.
+#
+#   ansible-playbook -i inventory.ini tests/render.yml
+# ============================================================================
+
+- name: Validate brick files against their invariants
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+  tasks:
+
+    # --- roles/base -----------------------------------------------------------
+    - name: Sudoers drop-in must pass visudo (the file itself, in CI, forever)
+      ansible.builtin.command: visudo -cf {{ repo_root }}/roles/base/files/10-wheel
+      changed_when: false
+
+    - name: Read the hardening sysctls
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/base/files/99-hardening.conf"
+      register: render_sysctl
+
+    - name: Sysctl invariants (loose rp_filter, kptr/dmesg restricted, no redirects)
+      ansible.builtin.assert:
+        that:
+          - "'net.ipv4.conf.all.rp_filter = 2' in render_sysctl_text"
+          - "'net.ipv4.conf.default.rp_filter = 2' in render_sysctl_text"
+          - "'rp_filter = 1' not in render_sysctl_text"
+          - "'kernel.kptr_restrict = 2' in render_sysctl_text"
+          - "'kernel.dmesg_restrict = 1' in render_sysctl_text"
+          - "'accept_redirects = 1' not in render_sysctl_text"
+          - "'send_redirects = 1' not in render_sysctl_text"
+          - "'accept_source_route = 1' not in render_sysctl_text"
+        fail_msg: >-
+          A hardening invariant broke. rp_filter MUST be 2 (loose): this
+          host carries five bridges and strict mode drops legitimate
+          asymmetric traffic between them.
+      vars:
+        render_sysctl_text: "{{ render_sysctl.content | b64decode }}"
+
+    # --- the shared contract ---------------------------------------------------
+    - name: Contract invariants (five domains, lab isolated, rotation subset)
+      ansible.builtin.assert:
+        that:
+          - network_domains | length == 5
+          - network_domains | selectattr('forward', 'equalto', 'isolated')
+            | map(attribute='name') | list == ['lab']
+          - network_domains | map(attribute='subnet') | list | unique | length == 5
+          - network_domains | map(attribute='bridge') | list | unique | length == 5
+          - gpu_trust_levels.keys() | difference(network_domains | map(attribute='name')) | length == 0
+          - "'services' not in gpu_trust_levels"
+        fail_msg: >-
+          The shared contract broke an invariant: exactly five domains, only
+          lab is isolated, no duplicate subnets/bridges, GPU rotation is a
+          strict subset of the domains, and services never joins it.

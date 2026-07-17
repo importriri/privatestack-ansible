@@ -1,0 +1,13 @@
+---
+# The lab bundle: mounts the six bricks, in mandatory order.
+# Bricks are uncommented as their stage lands - the shape is the plan.
+- name: Assemble the hypervisor lab host
+  hosts: hypervisor
+  become: true
+  roles:
+    - base
+    # - kvm_host           (A2)
+    # - vfio_boot          (A3)
+    # - network_domains    (A4)
+    # - lab_isolation      (A5)
+    # - gpu_handoff        (A6)

@@ -1,0 +1,62 @@
+---
+# ============================================================================
+# CI - discovery, not enumeration.
+# ----------------------------------------------------------------------------
+# This workflow is NEVER edited to add a brick. It discovers what exists:
+#   - every playbook in playbooks/       -> syntax-check
+#   - every role and playbook            -> ansible-lint (production profile)
+#   - tests/render.yml                   -> render/invariant tests
+#   - every tests/*.bats                 -> protocol tests
+#   - every shell script it can find     -> shellcheck
+# The toolchain is installed unconditionally: a few seconds buys a workflow
+# that never drifts. If adding a brick ever requires touching this file,
+# that is an architecture bug - treat it as one.
+# ============================================================================
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Install the fixed toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck bats nftables
+          pip install --user ansible-core ansible-lint
+
+      - name: Lint every role and playbook (production profile)
+        run: ansible-lint
+
+      - name: Syntax-check every playbook (discovered)
+        run: |
+          for pb in playbooks/*.yml; do
+            echo "--- ${pb}"
+            ansible-playbook --syntax-check -i inventory.ini "${pb}"
+          done
+
+      - name: Render and invariant tests
+        run: ansible-playbook -i inventory.ini tests/render.yml
+
+      - name: Protocol tests (bats, when a brick ships them)
+        run: |
+          if ls tests/*.bats >/dev/null 2>&1; then
+            bats tests/*.bats
+          else
+            echo "no bats suites yet"
+          fi
+
+      - name: Shellcheck every shell script (discovered)
+        run: |
+          files=$(grep -rlE '^#!(/usr)?/bin/(env )?(ba)?sh' --exclude-dir=.git --exclude='*.md' . 2>/dev/null || true)
+          if [ -n "${files}" ]; then
+            echo "${files}" | xargs shellcheck
+          else
+            echo "no shell scripts yet"
+          fi

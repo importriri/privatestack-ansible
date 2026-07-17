@@ -1,0 +1,48 @@
+---
+- name: Assert the target is Arch Linux
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Archlinux'
+    fail_msg: >-
+      This brick configures the Arch host that arch-bootstrap builds.
+      Refusing to run on os_family={{ ansible_facts['os_family'] }}.
+
+- name: Create the admin user in wheel
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: wheel
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Install the wheel sudoers drop-in (validated before landing)
+  ansible.builtin.copy:
+    src: 10-wheel
+    dest: /etc/sudoers.d/10-wheel
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Install kernel hardening sysctls
+  ansible.builtin.copy:
+    src: 99-hardening.conf
+    dest: /etc/sysctl.d/99-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload sysctl
+
+- name: Enable pacman color output
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: '^#?\s*Color$'
+    line: Color
+    insertafter: '^\[options\]'
+
+- name: Enable pacman parallel downloads
+  ansible.builtin.lineinfile:
+    path: /etc/pacman.conf
+    regexp: '^#?\s*ParallelDownloads'
+    line: "ParallelDownloads = {{ base_parallel_downloads }}"
+    insertafter: '^\[options\]'
