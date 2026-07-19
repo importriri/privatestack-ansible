@@ -1,0 +1,42 @@
+---
+- name: Check the systemd-boot entries directory
+  ansible.builtin.stat:
+    path: /boot/loader/entries
+  register: vfio_boot_entries_dir
+
+- name: Refuse without systemd-boot in place
+  ansible.builtin.assert:
+    that:
+      - vfio_boot_entries_dir.stat.isdir | default(false)
+    fail_msg: >-
+      /boot/loader/entries is missing: this host does not look like it was
+      built by arch-bootstrap (systemd-boot with a mounted ESP expected).
+
+- name: Read the LUKS UUID at runtime (a placeholder cannot reach /boot)
+  ansible.builtin.command: cryptsetup luksUUID {{ luks_root_device }}
+  register: vfio_boot_luks_raw
+  changed_when: false
+  check_mode: false
+
+- name: Verify the UUID shape before it touches a boot entry
+  ansible.builtin.assert:
+    that:
+      - vfio_boot_luks_raw.stdout is match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    fail_msg: >-
+      cryptsetup returned something that does not look like a LUKS UUID.
+      Refusing to write boot entries.
+
+- name: Pin the UUID for the templates
+  ansible.builtin.set_fact:
+    vfio_boot_luks_uuid: "{{ vfio_boot_luks_raw.stdout }}"
+
+- name: Install the four boot profiles
+  ansible.builtin.template:
+    src: entry.conf.j2
+    dest: /boot/loader/entries/{{ item.file }}
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ vfio_boot_profiles }}"
+  loop_control:
+    label: "{{ item.file }}"

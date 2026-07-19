@@ -90,3 +90,66 @@
       vars:
         render_kvm_pkgs: "{{ (render_kvm.results[0].content | b64decode | from_yaml).kvm_host_packages }}"
         render_kvm_tasks: "{{ render_kvm.results[1].content | b64decode }}"
+
+    # --- roles/vfio_boot --------------------------------------------------------
+    - name: Load the vfio_boot profiles
+      ansible.builtin.include_vars:
+        file: "{{ repo_root }}/roles/vfio_boot/defaults/main.yml"
+
+    - name: Make a rendering workspace
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: .render
+      register: render_ws
+
+    - name: Render the four boot entries with a pinned fake UUID
+      ansible.builtin.template:
+        src: "{{ repo_root }}/roles/vfio_boot/templates/entry.conf.j2"
+        dest: "{{ render_ws.path }}/{{ item.file }}"
+        mode: "0644"
+      loop: "{{ vfio_boot_profiles }}"
+      loop_control:
+        label: "{{ item.file }}"
+      vars:
+        vfio_boot_luks_uuid: 12345678-1234-1234-1234-123456789abc
+
+    - name: Read the rendered entries
+      ansible.builtin.slurp:
+        src: "{{ render_ws.path }}/{{ item.file }}"
+      register: render_entries
+      loop: "{{ vfio_boot_profiles }}"
+      loop_control:
+        label: "{{ item.file }}"
+
+    - name: Boot entry invariants (the M0 bug classes, pinned forever)
+      ansible.builtin.assert:
+        that:
+          - render_entry_text | regex_findall('(?m)\\\\$') | length == 0
+          - render_entry_text | regex_findall('(?m)^options ') | length >= 2
+          - "'cryptdevice' not in render_entry_text"
+          - "'YOUR-LUKS-UUID' not in render_entry_text"
+          - render_entry_text | regex_findall('\{\{') | length == 0
+          - "'rd.luks.name=12345678-1234-1234-1234-123456789abc=cryptroot' in render_entry_text"
+          - "'root=/dev/mapper/cryptroot' in render_entry_text"
+          - "'rootflags=subvol=@' in render_entry_text"
+          - "'zswap.enabled=0' in render_entry_text"
+          - render_entry_keys | unique | length == render_entry_keys | length
+        fail_msg: >-
+          A boot-entry invariant broke in {{ item.item.file }}: no backslash
+          continuations, one options line per group (at least two lines),
+          never cryptdevice, no surviving placeholder, contract mapper and
+          subvol rendered, no duplicate kernel parameter keys.
+        quiet: true
+      loop: "{{ render_entries.results }}"
+      loop_control:
+        label: "{{ item.item.file }}"
+      vars:
+        render_entry_text: "{{ item.content | b64decode }}"
+        render_entry_keys: "{{ render_entry_text | regex_findall('(?m)^options\\s+(.*)$') | join(' ') | split | map('regex_replace', '=.*', '') | list }}"
+
+    - name: The runtime UUID guard must reject the placeholder shape
+      ansible.builtin.assert:
+        that:
+          - "'YOUR-LUKS-UUID-HERE' is not match('^[0-9a-f]{8}-[0-9a-f]{4}-')"
+          - "'12345678-1234-1234-1234-123456789abc' is match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')"
+        fail_msg: The UUID regex no longer separates real UUIDs from placeholders.

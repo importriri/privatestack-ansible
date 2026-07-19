@@ -7,7 +7,7 @@
   roles:
     - base
     - kvm_host
-    # - vfio_boot          (A3)
+    - vfio_boot
     # - network_domains    (A4)
     # - lab_isolation      (A5)
     # - gpu_handoff        (A6)

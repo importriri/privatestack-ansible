@@ -1,0 +1,36 @@
+---
+# The four boot profiles, ONE options line per logical group.
+#
+# Option groups are verbatim from arch-hypervisor-lab/configs/boot (the
+# published, verified entries), with the contract alignments applied by the
+# template - mapper name and rootflags come from what arch-bootstrap
+# actually builds (cryptroot + subvol=@), never stored here.
+#
+# pcie_port_pm=off is THE fix for the instant freeze on this laptop family;
+# pcie_aspm=off is the safety net. See the lab repo problems/ writeups.
+vfio_boot_profiles:
+
+  - file: Arch-Linux-Hardened-Vfio.conf
+    title: Arch Linux (Vfio)
+    option_groups:
+      - "intel_iommu=on iommu=pt"
+      - "vfio-pci.ids={{ vfio_ids }}"
+      - "modprobe.blacklist=nouveau module_blacklist=nouveau nvidia-drm.modeset=0"
+      - "video=efifb:off pcie_port_pm=off pcie_aspm=off kvm.ignore_msrs=1"
+
+  - file: Arch-Linux-Hardened.conf
+    title: Arch Linux (Hardened)
+    option_groups:
+      - "modprobe.blacklist=nouveau,nvidia,nvidia_drm,nvidia_modeset nvidia-drm.modeset=0"
+      - "lockdown=confidentiality lsm=landlock,lockdown,yama,bpf"
+
+  - file: Arch-Linux-Integrated.conf
+    title: Arch Linux (Integrated)
+    option_groups:
+      - "i915.enable_guc=2"
+      - "modprobe.blacklist=nouveau,nvidia,nvidia_drm,nvidia_modeset nvidia-drm.modeset=0"
+
+  - file: Arch-Linux-Nvidia.conf
+    title: Arch Linux (Nvidia)
+    option_groups:
+      - "nvidia-drm.modeset=1 modprobe.blacklist=nouveau"
