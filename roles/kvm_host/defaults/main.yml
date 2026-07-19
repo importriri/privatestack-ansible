@@ -1,0 +1,12 @@
+---
+# qemu-base, NOT qemu-desktop: headless host, no GUI dependency chain.
+#
+# iptables-nft and dnsmasq look optional on Arch but are NOT for NAT
+# networks: libvirt's default NAT silently requires both. They are pacman
+# optdeps and de-facto hard deps - found the hard way, pinned in tests.
+kvm_host_packages:
+  - qemu-base
+  - libvirt
+  - iptables-nft
+  - dnsmasq
+  - edk2-ovmf

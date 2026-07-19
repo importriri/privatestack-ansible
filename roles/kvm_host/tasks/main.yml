@@ -1,0 +1,35 @@
+---
+- name: Check for /dev/kvm
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: kvm_host_dev
+
+- name: Refuse to continue without KVM
+  ansible.builtin.assert:
+    that:
+      - kvm_host_dev.stat.exists
+      - kvm_host_dev.stat.ischr
+    fail_msg: >-
+      /dev/kvm is missing: virtualization (VT-x / AMD-V) is almost certainly
+      disabled in the BIOS/UEFI firmware. Enable it and reboot - there is no
+      software fix for this one.
+
+- name: Install the headless KVM stack
+  community.general.pacman:
+    name: "{{ kvm_host_packages }}"
+    state: present
+
+- name: Enable socket activation (never the monolithic service)
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - libvirtd.socket
+    - virtlogd.socket
+
+- name: Let the admin drive virsh (libvirt group, polkit rule ships with libvirt)
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: libvirt
+    append: true

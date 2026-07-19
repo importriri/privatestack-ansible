@@ -26,7 +26,7 @@ package on the host. The host stays a fortress; the services stay cattle.
 | Brick | Job | Kind | Status |
 |---|---|---|---|
 | `base` | Admin user, validated sudoers drop-in, hardening sysctls, pacman QoL | lab bundle (1/6) | available |
-| `kvm_host` | Headless KVM stack, socket activation, `/dev/kvm` guard | lab bundle (2/6) | planned — A2 |
+| `kvm_host` | Headless KVM stack, socket activation, `/dev/kvm` guard | lab bundle (2/6) | available |
 | `vfio_boot` | The four systemd-boot entries, templated; LUKS UUID read at runtime | lab bundle (3/6) | planned — A3 |
 | `network_domains` | The five libvirt networks (four NAT + isolated lab) | lab bundle (4/6) | planned — A4 |
 | `lab_isolation` | The nftables cross-domain drop matrix | lab bundle (5/6) | planned — A5 |

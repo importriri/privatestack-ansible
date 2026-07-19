@@ -60,3 +60,33 @@
           The shared contract broke an invariant: exactly five domains, only
           lab is isolated, no duplicate subnets/bridges, GPU rotation is a
           strict subset of the domains, and services never joins it.
+
+    # --- roles/kvm_host ---------------------------------------------------------
+    - name: Read the kvm_host package list and tasks
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/kvm_host/{{ item }}/main.yml"
+      register: render_kvm
+      loop:
+        - defaults
+        - tasks
+
+    - name: Kvm_host invariants (headless, mandatory optdeps, socket activation)
+      ansible.builtin.assert:
+        that:
+          # structural: the actual package list, immune to comments
+          - "'qemu-base' in render_kvm_pkgs"
+          - "'qemu-desktop' not in render_kvm_pkgs"
+          - "'iptables-nft' in render_kvm_pkgs"
+          - "'dnsmasq' in render_kvm_pkgs"
+          # textual pins on the tasks
+          - "'libvirtd.socket' in render_kvm_tasks"
+          - "'virtlogd.socket' in render_kvm_tasks"
+          - "'libvirtd.service' not in render_kvm_tasks"
+        fail_msg: >-
+          A kvm_host invariant broke: the stack must stay headless
+          (qemu-base), iptables-nft and dnsmasq are de-facto hard deps for
+          libvirt NAT on Arch, and activation goes through sockets - never
+          the monolithic libvirtd.service.
+      vars:
+        render_kvm_pkgs: "{{ (render_kvm.results[0].content | b64decode | from_yaml).kvm_host_packages }}"
+        render_kvm_tasks: "{{ render_kvm.results[1].content | b64decode }}"

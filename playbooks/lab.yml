@@ -6,7 +6,7 @@
   become: true
   roles:
     - base
-    # - kvm_host           (A2)
+    - kvm_host
     # - vfio_boot          (A3)
     # - network_domains    (A4)
     # - lab_isolation      (A5)
