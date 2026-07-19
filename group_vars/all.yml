@@ -63,7 +63,7 @@ gpu_trust_levels:
   lab: 0
 
 # --- LAN exposure allowlist (DNAT) --------------------------------------------
-# One entry per deliberate hole. Empty until the first service lands (A8).
+# One entry per deliberate hole. Empty until the first service lands (A9).
 # Shape:
 #   - { name: jellyfin, proto: tcp, host_port: 8096,
 #       guest: 10.10.5.10, guest_port: 8096 }

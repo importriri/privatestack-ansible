@@ -31,8 +31,10 @@ package on the host. The host stays a fortress; the services stay cattle.
 | `network_domains` | The five libvirt networks (four NAT + isolated lab) | lab bundle (4/6) | planned — A4 |
 | `lab_isolation` | The nftables cross-domain drop matrix | lab bundle (5/6) | planned — A5 |
 | `gpu_handoff` | Trust-ranked GPU handoff hook, fail-closed | lab bundle (6/6) | planned — A6 |
-| `guest` | The VM foundation: verified cloud image, qcow2 overlay, cloud-init seed | foundation | planned — A7 |
-| `jellyfin` | Private media server — the reference optional brick | optional | planned — A8 |
+| `desktop` | Sway + ly cockpit, Catppuccin Mocha end to end, shell nav kit | optional | planned — A7 |
+| `dev_ide` | Emacs IDE: eglot LSP (java/js/html/css/bash/ansible) + Claude Code | optional (guests) | planned — A7 |
+| `guest` | The VM foundation: verified cloud image, qcow2 overlay, cloud-init seed | foundation | planned — A8 |
+| `jellyfin` | Private media server — the reference optional brick | optional | planned — A9 |
 | `nextcloud` | Private drive | optional | documented slot |
 | `vaultwarden` | Password manager | optional | documented slot |
 | `immich` | Private photo library | optional | documented slot |
