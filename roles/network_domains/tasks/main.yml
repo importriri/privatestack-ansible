@@ -1,0 +1,36 @@
+---
+- name: Install the libvirt python bindings (community.libvirt needs them)
+  community.general.pacman:
+    name: python-libvirt
+    state: present
+
+- name: List the networks libvirt already knows
+  community.libvirt.virt_net:
+    command: list_nets
+  register: network_domains_known
+
+- name: Define the missing domains
+  community.libvirt.virt_net:
+    command: define
+    name: "{{ item.name }}"
+    xml: "{{ lookup('ansible.builtin.template', 'net.xml.j2') }}"
+  loop: "{{ network_domains }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in network_domains_known.list_nets
+
+- name: Activate every domain
+  community.libvirt.virt_net:
+    name: "{{ item.name }}"
+    state: active
+  loop: "{{ network_domains }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Autostart every domain
+  community.libvirt.virt_net:
+    name: "{{ item.name }}"
+    autostart: true
+  loop: "{{ network_domains }}"
+  loop_control:
+    label: "{{ item.name }}"

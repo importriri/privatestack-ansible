@@ -28,7 +28,7 @@ package on the host. The host stays a fortress; the services stay cattle.
 | `base` | Admin user, validated sudoers drop-in, hardening sysctls, pacman QoL | lab bundle (1/6) | available |
 | `kvm_host` | Headless KVM stack, socket activation, `/dev/kvm` guard | lab bundle (2/6) | available |
 | `vfio_boot` | The four systemd-boot entries, templated; LUKS UUID read at runtime | lab bundle (3/6) | available |
-| `network_domains` | The five libvirt networks (four NAT + isolated lab) | lab bundle (4/6) | planned — A4 |
+| `network_domains` | The five libvirt networks (four NAT + isolated lab) | lab bundle (4/6) | available |
 | `lab_isolation` | The nftables cross-domain drop matrix | lab bundle (5/6) | planned — A5 |
 | `gpu_handoff` | Trust-ranked GPU handoff hook, fail-closed | lab bundle (6/6) | planned — A6 |
 | `desktop` | Sway + ly cockpit, Catppuccin Mocha end to end, shell nav kit | optional | planned — A7 |

@@ -1,0 +1,12 @@
+<network>
+  <name>{{ item.name }}</name>
+  <bridge name="{{ item.bridge }}" stp="on" delay="0"/>
+{% if item.forward == 'nat' %}
+  <forward mode="nat"/>
+{% endif %}
+  <ip address="{{ item.gateway }}" netmask="255.255.255.0">
+    <dhcp>
+      <range start="{{ item.subnet | regex_replace('\.0/24$', '.100') }}" end="{{ item.subnet | regex_replace('\.0/24$', '.199') }}"/>
+    </dhcp>
+  </ip>
+</network>

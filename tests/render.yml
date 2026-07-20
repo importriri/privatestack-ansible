@@ -154,6 +154,7 @@
           - "'12345678-1234-1234-1234-123456789abc' is match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')"
         fail_msg: The UUID regex no longer separates real UUIDs from placeholders.
 
+
     # --- roles/vfio_boot: early-bind drop-in --------------------------------------
     - name: Read the vfio early-bind drop-in
       ansible.builtin.slurp:
@@ -174,3 +175,50 @@
         quiet: true
       vars:
         render_vfio_dropin_text: "{{ render_vfio_dropin.content | b64decode }}"
+
+    # --- roles/network_domains --------------------------------------------------
+    - name: Render the five network XMLs
+      ansible.builtin.template:
+        src: "{{ repo_root }}/roles/network_domains/templates/net.xml.j2"
+        dest: "{{ render_ws.path }}/net-{{ item.name }}.xml"
+        mode: "0644"
+      loop: "{{ network_domains }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Every rendered network must parse as XML
+      ansible.builtin.command: >-
+        python3 -c "import xml.etree.ElementTree as ET;
+        ET.parse('{{ render_ws.path }}/net-{{ item.name }}.xml')"
+      changed_when: false
+      loop: "{{ network_domains }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Read the rendered networks
+      ansible.builtin.slurp:
+        src: "{{ render_ws.path }}/net-{{ item.name }}.xml"
+      register: render_nets
+      loop: "{{ network_domains }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Network invariants (NAT vs isolated as a strict equivalence)
+      ansible.builtin.assert:
+        that:
+          - (item.item.forward == 'nat') == ('<forward mode="nat"/>' in render_net_text)
+          - (item.item.forward == 'isolated') == ('<forward' not in render_net_text)
+          - render_net_text is search('bridge name="' ~ item.item.bridge ~ '"')
+          - render_net_text is search('address="' ~ item.item.gateway ~ '"')
+          - "'<dhcp>' in render_net_text"
+        fail_msg: >-
+          A network invariant broke in {{ item.item.name }}: NAT domains
+          carry exactly <forward mode="nat"/>, the isolated domain carries
+          NO forward element at all, bridge and gateway must match the
+          contract, DHCP present everywhere.
+        quiet: true
+      loop: "{{ render_nets.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      vars:
+        render_net_text: "{{ item.content | b64decode }}"

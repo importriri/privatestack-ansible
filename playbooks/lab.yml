@@ -8,6 +8,6 @@
     - base
     - kvm_host
     - vfio_boot
-    # - network_domains    (A4)
+    - network_domains
     # - lab_isolation      (A5)
     # - gpu_handoff        (A6)
