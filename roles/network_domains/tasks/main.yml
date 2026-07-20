@@ -1,7 +1,7 @@
 ---
 - name: Install the libvirt python bindings (community.libvirt needs them)
   community.general.pacman:
-    name: python-libvirt
+    name: libvirt-python
     state: present
 
 - name: List the networks libvirt already knows
