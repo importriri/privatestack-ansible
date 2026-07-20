@@ -1,0 +1,6 @@
+---
+# mkinitcpio -P regenerates every preset; one notify at the end of the play
+# covers however many changes queued it.
+- name: Regenerate the initramfs
+  ansible.builtin.command: mkinitcpio -P
+  changed_when: true

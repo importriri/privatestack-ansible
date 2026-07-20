@@ -20,8 +20,11 @@ luks_mapper_name: cryptroot
 root_subvol: "@"
 kernel_name: linux-hardened
 
-# --- VFIO: RTX 3070 Mobile + its HDMI audio function -------------------------
-vfio_ids: "10de:249d,10de:228b"
+# --- VFIO: GPU + HDMI audio handed to vfio-pci --------------------------------
+# Two machines, one var - swap the value when the deployment moves:
+#   test bench   - Acer Nitro 5, RTX 3060 Mobile:           "10de:2520,10de:228e"
+#   final target - Predator Helios 300, RTX 3070 Mobile:    "10de:249d,10de:228b"
+vfio_ids: "10de:2520,10de:228e"
 
 # --- The five domains (zones) -------------------------------------------------
 # forward: nat      -> guests reach out through the host, nothing reaches in

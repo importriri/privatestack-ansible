@@ -153,3 +153,24 @@
           - "'YOUR-LUKS-UUID-HERE' is not match('^[0-9a-f]{8}-[0-9a-f]{4}-')"
           - "'12345678-1234-1234-1234-123456789abc' is match('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')"
         fail_msg: The UUID regex no longer separates real UUIDs from placeholders.
+
+    # --- roles/vfio_boot: early-bind drop-in --------------------------------------
+    - name: Read the vfio early-bind drop-in
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/roles/vfio_boot/files/10-vfio.conf"
+      register: render_vfio_dropin
+
+    - name: Early-bind invariants (three modules, append-only syntax)
+      ansible.builtin.assert:
+        that:
+          - "'MODULES+=(' in render_vfio_dropin_text"
+          - "'vfio_pci' in render_vfio_dropin_text"
+          - "' vfio ' in render_vfio_dropin_text"
+          - "'vfio_iommu_type1' in render_vfio_dropin_text"
+        fail_msg: >-
+          The early-bind drop-in lost a module or stopped appending:
+          it must APPEND vfio_pci, vfio, vfio_iommu_type1 - a full
+          MODULES= replacement would silently drop what mkinitcpio.conf sets.
+        quiet: true
+      vars:
+        render_vfio_dropin_text: "{{ render_vfio_dropin.content | b64decode }}"

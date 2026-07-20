@@ -40,3 +40,24 @@
   loop: "{{ vfio_boot_profiles }}"
   loop_control:
     label: "{{ item.file }}"
+
+- name: Early-bind vfio in the initramfs (drop-in - never edit mkinitcpio.conf)
+  ansible.builtin.copy:
+    src: 10-vfio.conf
+    dest: /etc/mkinitcpio.conf.d/10-vfio.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Regenerate the initramfs
+
+- name: Point the loader default at the managed Hardened entry
+  ansible.builtin.lineinfile:
+    path: /boot/loader/loader.conf
+    regexp: '^default '
+    line: default Arch-Linux-Hardened.conf
+    mode: "0644"
+
+- name: Retire the installer's own entry (same title, zero blacklists)
+  ansible.builtin.file:
+    path: /boot/loader/entries/arch-hardened.conf
+    state: absent
