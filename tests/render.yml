@@ -222,3 +222,53 @@
         label: "{{ item.item.name }}"
       vars:
         render_net_text: "{{ item.content | b64decode }}"
+
+    # --- roles/lab_isolation ----------------------------------------------------
+    - name: Load the lab_isolation defaults
+      ansible.builtin.include_vars:
+        file: "{{ repo_root }}/roles/lab_isolation/defaults/main.yml"
+
+    - name: Render the isolation matrix
+      ansible.builtin.template:
+        src: "{{ repo_root }}/roles/lab_isolation/templates/lab-isolation.nft.j2"
+        dest: "{{ render_ws.path }}/lab-isolation.nft"
+        mode: "0644"
+
+    - name: The real judge - nft -c on the rendered ruleset
+      ansible.builtin.command: nft -c -f {{ render_ws.path }}/lab-isolation.nft
+      changed_when: false
+
+    - name: Read the rendered matrix and the shipped nftables.conf
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      register: render_nft
+      loop:
+        - "{{ render_ws.path }}/lab-isolation.nft"
+        - "{{ repo_root }}/roles/lab_isolation/files/nftables.conf"
+        - "{{ repo_root }}/roles/lab_isolation/handlers/main.yml"
+
+    - name: Matrix invariants (flush scope, completeness, priority, reload-only)
+      ansible.builtin.assert:
+        that:
+          - render_nft_matrix | regex_findall('(?m)^\\s*flush ruleset') | length == 0
+          - render_nft_matrix | regex_findall('flush table inet lab_isolation') | length == 1
+          - render_nft_matrix | regex_findall('iifname "virbr-[a-z]+" oifname "virbr-[a-z]+" counter drop') | length == render_nft_pairs | int
+          - "'priority -10' in render_nft_matrix"
+          - "'policy accept' in render_nft_matrix"
+          - "'iifname \"virbr-lab\" counter drop' in render_nft_matrix"
+          - "'oifname \"virbr-lab\" counter drop' in render_nft_matrix"
+          - render_nft_conf | regex_findall('(?m)^\\s*flush ruleset') | length == 0
+          - "'include \"/etc/nftables.d/*.nft\"' in render_nft_conf"
+          - "'state: reloaded' in render_nft_handlers"
+          - "'state: restarted' not in render_nft_handlers"
+        fail_msg: >-
+          A matrix invariant broke: never flush ruleset (anywhere), flush
+          exactly this table once, the deny matrix must be complete
+          (n*(n-1) pairs), drops sit before libvirt's accepts
+          (priority -10), the lab forwards nothing either way, and the
+          service is reloaded - never restarted.
+      vars:
+        render_nft_matrix: "{{ render_nft.results[0].content | b64decode }}"
+        render_nft_conf: "{{ render_nft.results[1].content | b64decode }}"
+        render_nft_handlers: "{{ render_nft.results[2].content | b64decode }}"
+        render_nft_pairs: "{{ network_domains | length * (network_domains | length - 1) }}"

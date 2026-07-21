@@ -1,0 +1,28 @@
+# Managed by privatestack-ansible (roles/lab_isolation).
+#
+# Idempotent by construction: declare the table, flush ONLY this table,
+# redefine it. NEVER flush ruleset - libvirt keeps runtime NAT rules that
+# would not survive it. Reload the service, never restart it (the unit's
+# stop action flushes the ruleset on Arch).
+
+table inet lab_isolation
+flush table inet lab_isolation
+
+table inet lab_isolation {
+    chain forward {
+        type filter hook forward priority -10; policy accept;
+
+        # the lab forwards nothing, in no direction
+        iifname "{{ lab_isolation_lab_bridge }}" counter drop
+        oifname "{{ lab_isolation_lab_bridge }}" counter drop
+
+        # default-deny matrix: no cross-bridge traffic between domains
+{% for a in network_domains %}
+{% for b in network_domains %}
+{% if a.name != b.name %}
+        iifname "{{ a.bridge }}" oifname "{{ b.bridge }}" counter drop
+{% endif %}
+{% endfor %}
+{% endfor %}
+    }
+}
