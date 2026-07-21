@@ -10,4 +10,4 @@
     - vfio_boot
     - network_domains
     - lab_isolation
-    # - gpu_handoff        (A6)
+    - gpu_handoff

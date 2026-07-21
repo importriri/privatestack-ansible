@@ -1,0 +1,32 @@
+---
+- name: Make the config directory
+  ansible.builtin.file:
+    path: /etc/gpu-handoff
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the trust rotation (rendered from the contract)
+  ansible.builtin.template:
+    src: rotation.j2
+    dest: /etc/gpu-handoff/rotation
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Make the libvirt hooks directory
+  ansible.builtin.file:
+    path: /etc/libvirt/hooks
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the qemu hook (a hook that cannot execute guards nothing)
+  ansible.builtin.copy:
+    src: qemu
+    dest: /etc/libvirt/hooks/qemu
+    owner: root
+    group: root
+    mode: "0755"

@@ -30,7 +30,7 @@ package on the host. The host stays a fortress; the services stay cattle.
 | `vfio_boot` | The four systemd-boot entries, templated; LUKS UUID read at runtime | lab bundle (3/6) | available |
 | `network_domains` | The five libvirt networks (four NAT + isolated lab) | lab bundle (4/6) | available |
 | `lab_isolation` | The nftables cross-domain drop matrix | lab bundle (5/6) | available |
-| `gpu_handoff` | Trust-ranked GPU handoff hook, fail-closed | lab bundle (6/6) | planned — A6 |
+| `gpu_handoff` | Trust-ranked GPU handoff hook, fail-closed | lab bundle (6/6) | available |
 | `desktop` | Sway + ly cockpit, Catppuccin Mocha end to end, shell nav kit | optional | planned — A7 |
 | `dev_ide` | Emacs IDE: eglot LSP (java/js/html/css/bash/ansible) + Claude Code | optional (guests) | planned — A7 |
 | `guest` | The VM foundation: verified cloud image, qcow2 overlay, cloud-init seed | foundation | planned — A8 |
@@ -101,6 +101,13 @@ Every push runs, via discovery:
   must be the only isolated one, the GPU rotation must never include
   `services`, ...). The suite grows with every brick;
 - **`bats`** protocol suites and **`shellcheck`**, when a brick ships shell.
+The whole battery runs locally in one shot: **`./verify.sh`** - the
+same levels CI runs, by discovery, correct at every stage of the repo,
+and usable as a pre-commit hook. And because a test that has never
+been seen red proves nothing, [`tests/MUTATIONS.md`](tests/MUTATIONS.md)
+catalogs fifteen deliberate breakages - one per invariant - with the
+exact command, the check expected to turn red, and the restore.
+Replay one before you push.
 
 ## License
 
