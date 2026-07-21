@@ -2,3 +2,7 @@
 # Derived, not duplicated: the lab bridge is whichever contract domain is
 # marked isolated. One source of truth.
 lab_isolation_lab_bridge: "{{ (network_domains | selectattr('forward', 'equalto', 'isolated') | first).bridge }}"
+
+# The table this brick owns. Written by the template, asked for by the task
+# that checks the kernel - one name, never two literals to keep in sync.
+lab_isolation_table: inet lab_isolation

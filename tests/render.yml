@@ -2,7 +2,8 @@
 # ============================================================================
 # RENDER / INVARIANT TESTS
 # ----------------------------------------------------------------------------
-# Runs locally and in CI. No root, no writes outside a tmpdir. Every brick
+# Runs locally and in CI. No writes outside a tmpdir; one task needs root
+# (nft -c opens a netlink socket), so by hand it wants -K. Every brick
 # that ships or generates a file gets its invariants pinned here: the
 # findings paid for with real bugs become executable assertions.
 #
@@ -247,6 +248,7 @@
         - "{{ render_ws.path }}/lab-isolation.nft"
         - "{{ repo_root }}/roles/lab_isolation/files/nftables.conf"
         - "{{ repo_root }}/roles/lab_isolation/handlers/main.yml"
+        - "{{ repo_root }}/roles/lab_isolation/tasks/main.yml"
 
     - name: Matrix invariants (flush scope, completeness, priority, reload-only)
       ansible.builtin.assert:
@@ -262,14 +264,20 @@
           - "'include \"/etc/nftables.d/*.nft\"' in render_nft_conf"
           - "'state: reloaded' in render_nft_handlers"
           - "'state: restarted' not in render_nft_handlers"
+          - "'state: restarted' not in render_nft_tasks"
+          - "'state: started' not in render_nft_tasks"
+          - "'nft list table' in render_nft_tasks"
+          - "'when: lab_isolation_live.rc != 0' in render_nft_tasks"
         fail_msg: >-
           A matrix invariant broke: never flush ruleset (anywhere), flush
           exactly this table once, the deny matrix must be complete
           (n*(n-1) pairs), drops sit before libvirt's accepts
-          (priority -10), the lab forwards nothing either way, and the
-          service is reloaded - never restarted.
+          (priority -10), the lab forwards nothing either way, the
+          service is reloaded - never started, never restarted - and the
+          load is gated on the kernel actually holding the table.
       vars:
         render_nft_matrix: "{{ render_nft.results[0].content | b64decode }}"
         render_nft_conf: "{{ render_nft.results[1].content | b64decode }}"
         render_nft_handlers: "{{ render_nft.results[2].content | b64decode }}"
+        render_nft_tasks: "{{ render_nft.results[3].content | b64decode }}"
         render_nft_pairs: "{{ network_domains | length * (network_domains | length - 1) }}"

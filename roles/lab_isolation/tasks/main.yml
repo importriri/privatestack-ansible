@@ -31,8 +31,26 @@
     validate: nft -c -f %s
   notify: Reload nftables
 
-- name: Enable and start nftables (reload-only from here on)
+# systemd only knows whether it ran nft, not whether the rules are in the
+# kernel. Asserting the unit is started makes every run report changed the
+# moment it stops holding its active-exited state, and buries real drift in
+# that noise. Ask the kernel instead: the table is the fact that matters.
+- name: Enable nftables at boot
   ansible.builtin.systemd_service:
     name: nftables
     enabled: true
-    state: started
+
+- name: Ask the kernel - not systemd - whether the isolation table is live
+  ansible.builtin.command: nft list table {{ lab_isolation_table }}
+  register: lab_isolation_live
+  changed_when: false
+  failed_when: false
+
+# 'reloaded' starts the unit when it is down and reloads it when it is up:
+# either way the ruleset lands without ever stopping it (the unit's stop
+# action flushes the whole ruleset, libvirt's NAT included).
+- name: Load the ruleset only when the kernel is missing it (never restart)
+  ansible.builtin.systemd_service:
+    name: nftables
+    state: reloaded
+  when: lab_isolation_live.rc != 0

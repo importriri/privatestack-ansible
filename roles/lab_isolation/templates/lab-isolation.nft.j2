@@ -5,10 +5,10 @@
 # would not survive it. Reload the service, never restart it (the unit's
 # stop action flushes the ruleset on Arch).
 
-table inet lab_isolation
-flush table inet lab_isolation
+table {{ lab_isolation_table }}
+flush table {{ lab_isolation_table }}
 
-table inet lab_isolation {
+table {{ lab_isolation_table }} {
     chain forward {
         type filter hook forward priority -10; policy accept;
 
