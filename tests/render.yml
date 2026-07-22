@@ -236,6 +236,7 @@
         mode: "0644"
 
     - name: The real judge - nft -c on the rendered ruleset
+      become: true
       ansible.builtin.command: nft -c -f {{ render_ws.path }}/lab-isolation.nft
       changed_when: false
 
