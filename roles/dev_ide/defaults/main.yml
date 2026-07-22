@@ -1,0 +1,26 @@
+---
+# Guests only: the hypervisor never becomes a dev box (playbook-enforced,
+# invariant-pinned). emacs-wayland, NOT emacs: the cockpit is X11-free.
+#
+# LSP coverage, one server per stack, official repos where they exist:
+#   java  -> jdtls            js/ts -> typescript-language-server
+#   bash  -> bash-language-server (+ shellcheck for flymake)
+# html/css/json and ansible ship via npm below - they have no pacman
+# package, and the bricks do not touch the AUR.
+dev_ide_packages:
+  - emacs-wayland
+  - git
+  - nodejs
+  - npm
+  - jdk-openjdk
+  - jdtls
+  - bash-language-server
+  - typescript-language-server
+  - shellcheck
+
+# claude-code downloads a native binary; `claude` authenticates on first
+# run - a manual step the brick must not fake (same rule as sbctl keys).
+dev_ide_npm_globals:
+  - vscode-langservers-extracted
+  - "@ansible/ansible-language-server"
+  - "@anthropic-ai/claude-code"

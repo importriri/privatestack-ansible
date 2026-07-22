@@ -236,7 +236,6 @@
         mode: "0644"
 
     - name: The real judge - nft -c on the rendered ruleset
-      become: true
       ansible.builtin.command: nft -c -f {{ render_ws.path }}/lab-isolation.nft
       changed_when: false
 
@@ -281,3 +280,85 @@
         render_nft_handlers: "{{ render_nft.results[2].content | b64decode }}"
         render_nft_tasks: "{{ render_nft.results[3].content | b64decode }}"
         render_nft_pairs: "{{ network_domains | length * (network_domains | length - 1) }}"
+
+    # --- roles/gpu_handoff ------------------------------------------------------
+    - name: Render the trust rotation from the contract
+      ansible.builtin.template:
+        src: "{{ repo_root }}/roles/gpu_handoff/templates/rotation.j2"
+        dest: "{{ render_ws.path }}/rotation"
+        mode: "0644"
+
+    - name: Read the rendered rotation and the gpu_handoff tasks
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      register: render_gpu
+      loop:
+        - "{{ render_ws.path }}/rotation"
+        - "{{ repo_root }}/roles/gpu_handoff/tasks/main.yml"
+
+    - name: Rotation invariants (contract map, services never, hook lands 0755)
+      ansible.builtin.assert:
+        that:
+          - render_gpu_rotation | regex_findall('(?m)^[a-z]+ [0-9]+$') | length == gpu_trust_levels | length
+          - "'services' not in render_gpu_rotation"
+          - "'clean 3' in render_gpu_rotation"
+          - "'lab 0' in render_gpu_rotation"
+          - 'render_gpu_tasks is search(''hooks/qemu[\s\S]{0,160}mode: "0755"'')'
+        fail_msg: >-
+          A gpu_handoff invariant broke: the rotation must hold exactly the
+          contract trust map (and services never joins it), and the hook
+          must land with mode 0755 - a hook that cannot execute guards
+          nothing.
+      vars:
+        render_gpu_rotation: "{{ render_gpu.results[0].content | b64decode }}"
+        render_gpu_tasks: "{{ render_gpu.results[1].content | b64decode }}"
+
+    # --- cleanup ----------------------------------------------------------------
+    - name: Remove the rendering workspace
+      ansible.builtin.file:
+        path: "{{ render_ws.path }}"
+        state: absent
+
+    # --- cockpit (desktop + dev_ide) --------------------------------------------
+    - name: Read the cockpit bricks and their playbooks
+      ansible.builtin.slurp:
+        src: "{{ repo_root }}/{{ item }}"
+      register: render_cockpit
+      loop:
+        - roles/desktop/defaults/main.yml
+        - roles/desktop/tasks/main.yml
+        - roles/dev_ide/defaults/main.yml
+        - playbooks/desktop.yml
+        - playbooks/dev.yml
+        - playbooks/lab.yml
+
+    - name: Cockpit invariants (opt-in, wayland-pure, guests-only IDE)
+      ansible.builtin.assert:
+        that:
+          - "'sway' in render_desk_pkgs"
+          - "'ly' in render_desk_pkgs"
+          - "'sddm' not in render_desk_pkgs"
+          - "'gdm' not in render_desk_pkgs"
+          - "'xorg-server' not in render_desk_pkgs"
+          - "'ly.service' in render_desk_tasks"
+          - "'emacs-wayland' in render_ide_pkgs"
+          - "'emacs' not in render_ide_pkgs"
+          - "'@anthropic-ai/claude-code' in render_ide_npm"
+          # structural: parsed plays, immune to comments (the A2 lesson)
+          - "render_desktop_hosts == 'hypervisor:workstations'"
+          - "render_dev_hosts == 'workstations'"
+          - "'desktop' not in render_lab_roles"
+          - "'dev_ide' not in render_lab_roles"
+        fail_msg: >-
+          A cockpit invariant broke: the desktop stays opt-in (never in
+          lab.yml), wayland-pure (sway + ly, no X11 display manager,
+          emacs-wayland), the dev brick never lands on the hypervisor,
+          and Claude Code ships with the IDE.
+      vars:
+        render_desk_pkgs: "{{ (render_cockpit.results[0].content | b64decode | from_yaml).desktop_packages }}"
+        render_desk_tasks: "{{ render_cockpit.results[1].content | b64decode }}"
+        render_ide_pkgs: "{{ (render_cockpit.results[2].content | b64decode | from_yaml).dev_ide_packages }}"
+        render_ide_npm: "{{ (render_cockpit.results[2].content | b64decode | from_yaml).dev_ide_npm_globals }}"
+        render_desktop_hosts: "{{ (render_cockpit.results[3].content | b64decode | from_yaml)[0].hosts }}"
+        render_dev_hosts: "{{ (render_cockpit.results[4].content | b64decode | from_yaml)[0].hosts }}"
+        render_lab_roles: "{{ (render_cockpit.results[5].content | b64decode | from_yaml)[0].roles }}"

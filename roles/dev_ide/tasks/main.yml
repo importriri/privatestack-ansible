@@ -1,0 +1,42 @@
+---
+- name: Install the IDE stack
+  community.general.pacman:
+    name: "{{ dev_ide_packages }}"
+    state: present
+
+- name: Install the language servers and Claude Code (npm, global)
+  community.general.npm:
+    name: "{{ item }}"
+    global: true
+    state: present
+  loop: "{{ dev_ide_npm_globals }}"
+
+- name: Create the emacs config directory
+  ansible.builtin.file:
+    path: "/home/{{ admin_user }}/.config/emacs"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Deploy the emacs configuration
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/home/{{ admin_user }}/.config/emacs/{{ item }}"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+  loop:
+    - early-init.el
+    - init.el
+
+- name: Point the shell at the IDE (managed block, reversible)
+  ansible.builtin.blockinfile:
+    path: "/home/{{ admin_user }}/.bashrc"
+    create: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+    marker: "# {mark} privatestack dev_ide brick"
+    block: |
+      export EDITOR=emacs

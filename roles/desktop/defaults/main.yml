@@ -1,0 +1,42 @@
+---
+# The optional cockpit. The lab bundle keeps the host blind (TTY): this
+# brick is opt-in, mounted by playbooks/desktop.yml - never by lab.yml.
+# On the host it rides the free iGPU: the dGPU belongs to gpu_handoff.
+#
+# sway, NOT swayfx and NOT a DE: official repos only (no AUR in bricks),
+# one compositor, no dependency chain. The eye candy is theming
+# (Catppuccin Mocha end to end), not a fork.
+# ly is the display manager: console-grade, ~1 MB, no seat circus.
+desktop_packages:
+  - sway
+  - swaybg
+  - swayidle
+  - swaylock
+  - waybar
+  - fuzzel
+  - foot
+  - mako
+  - grim
+  - slurp
+  - wl-clipboard
+  - xdg-desktop-portal-wlr
+  - xdg-user-dirs
+  - brightnessctl
+  - polkit
+  - pipewire
+  - pipewire-pulse
+  - wireplumber
+  - pamixer
+  - ttf-jetbrains-mono-nerd
+  - noto-fonts
+  - ly
+  # navigation & shell productivity kit
+  - starship
+  - zoxide
+  - fzf
+  - eza
+  - bat
+  - ripgrep
+  - fd
+  - yazi
+  - btop

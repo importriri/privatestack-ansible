@@ -1,0 +1,28 @@
+{
+    "layer": "top",
+    "height": 32,
+    "spacing": 6,
+    "modules-left": ["sway/workspaces", "sway/mode"],
+    "modules-center": ["clock"],
+    "modules-right": ["pulseaudio", "network", "cpu", "memory", "battery", "tray"],
+    "clock": { "format": "  {:%a %d %b   %H:%M}" },
+    "cpu": { "format": "  {usage}%" },
+    "memory": { "format": "  {}%" },
+    "battery": {
+        "states": { "warning": 25, "critical": 10 },
+        "format": "{icon}  {capacity}%",
+        "format-charging": "  {capacity}%",
+        "format-icons": ["", "", "", "", ""]
+    },
+    "network": {
+        "format-wifi": "  {essid}",
+        "format-ethernet": "󰈀  {ifname}",
+        "format-disconnected": "󰖪  offline"
+    },
+    "pulseaudio": {
+        "format": "{icon}  {volume}%",
+        "format-muted": "󰝟  mute",
+        "format-icons": { "default": ["", "", ""] },
+        "on-click": "pamixer -t"
+    }
+}

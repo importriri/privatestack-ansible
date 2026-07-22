@@ -1,0 +1,58 @@
+---
+- name: Install the desktop stack
+  community.general.pacman:
+    name: "{{ desktop_packages }}"
+    state: present
+
+- name: Enable ly on tty2 (starts at next boot - never yank a live TTY)
+  ansible.builtin.systemd_service:
+    name: ly.service
+    enabled: true
+
+- name: Create the config directories
+  ansible.builtin.file:
+    path: "/home/{{ admin_user }}/.config/{{ item }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+  loop:
+    - sway
+    - waybar
+    - foot
+    - fuzzel
+    - mako
+
+- name: Deploy the Mocha rice
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "/home/{{ admin_user }}/.config/{{ item.dest }}"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+  loop:
+    - { src: sway.config, dest: sway/config }
+    - { src: waybar.jsonc, dest: waybar/config.jsonc }
+    - { src: waybar.css, dest: waybar/style.css }
+    - { src: foot.ini, dest: foot/foot.ini }
+    - { src: fuzzel.ini, dest: fuzzel/fuzzel.ini }
+    - { src: mako.conf, dest: mako/config }
+    - { src: starship.toml, dest: starship.toml }
+
+- name: Wire the shell kit into bash (managed block, reversible)
+  ansible.builtin.blockinfile:
+    path: "/home/{{ admin_user }}/.bashrc"
+    create: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
+    marker: "# {mark} privatestack desktop brick"
+    block: |
+      eval "$(starship init bash)"
+      eval "$(zoxide init bash)"
+      alias ls='eza --group-directories-first'
+      alias ll='eza -la --group-directories-first'
+      alias cat='bat --paging=never'
+      alias tree='eza --tree'
+      source /usr/share/fzf/key-bindings.bash
+      source /usr/share/fzf/completion.bash

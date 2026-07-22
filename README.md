@@ -31,8 +31,8 @@ package on the host. The host stays a fortress; the services stay cattle.
 | `network_domains` | The five libvirt networks (four NAT + isolated lab) | lab bundle (4/6) | available |
 | `lab_isolation` | The nftables cross-domain drop matrix | lab bundle (5/6) | available |
 | `gpu_handoff` | Trust-ranked GPU handoff hook, fail-closed | lab bundle (6/6) | available |
-| `desktop` | Sway + ly cockpit, Catppuccin Mocha end to end, shell nav kit | optional | planned — A7 |
-| `dev_ide` | Emacs IDE: eglot LSP (java/js/html/css/bash/ansible) + Claude Code | optional (guests) | planned — A7 |
+| `desktop` | Sway + ly cockpit, Catppuccin Mocha end to end, shell nav kit | optional | available |
+| `dev_ide` | Emacs IDE: eglot LSP (java/js/html/css/bash/ansible) + Claude Code | optional (guests) | available |
 | `guest` | The VM foundation: verified cloud image, qcow2 overlay, cloud-init seed | foundation | planned — A8 |
 | `jellyfin` | Private media server — the reference optional brick | optional | planned — A9 |
 | `nextcloud` | Private drive | optional | documented slot |
@@ -41,6 +41,13 @@ package on the host. The host stays a fortress; the services stay cattle.
 | `pihole` | Filtering DNS | optional | documented slot |
 
 Bricks land stage by stage; this table is the truth about what exists.
+
+The cockpit is opt-in: `playbooks/desktop.yml` mounts the desktop on the
+host or on any VM in `workstations` (the host rides its free iGPU — the
+dGPU belongs to `gpu_handoff`); `playbooks/dev.yml` turns a guest into a
+dev workstation — same cockpit plus the Emacs IDE wired to eglot and
+Claude Code (`claude` authenticates on first run: manual, by design).
+The lab bundle never mounts either — the blind host stays the default.
 
 ## Assembly
 
