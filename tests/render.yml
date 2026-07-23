@@ -341,7 +341,10 @@
           - "'sddm' not in render_desk_pkgs"
           - "'gdm' not in render_desk_pkgs"
           - "'xorg-server' not in render_desk_pkgs"
-          - "'ly.service' in render_desk_tasks"
+          # the display manager is a template unit: one systemd task, one
+          # instance, and it is the TTY the role claims. Equality is the point
+          # - it also refuses a silent slide back to a plain ly.service.
+          - "render_desk_units == ['ly@tty2.service']"
           - "'emacs-wayland' in render_ide_pkgs"
           - "'emacs' not in render_ide_pkgs"
           - "'@anthropic-ai/claude-code' in render_ide_npm"
@@ -357,7 +360,11 @@
           and Claude Code ships with the IDE.
       vars:
         render_desk_pkgs: "{{ (render_cockpit.results[0].content | b64decode | from_yaml).desktop_packages }}"
-        render_desk_tasks: "{{ render_cockpit.results[1].content | b64decode }}"
+        render_desk_units: >-
+          {{ (render_cockpit.results[1].content | b64decode | from_yaml)
+             | map('dict2items') | flatten
+             | selectattr('key', 'equalto', 'ansible.builtin.systemd_service')
+             | map(attribute='value.name') | list }}
         render_ide_pkgs: "{{ (render_cockpit.results[2].content | b64decode | from_yaml).dev_ide_packages }}"
         render_ide_npm: "{{ (render_cockpit.results[2].content | b64decode | from_yaml).dev_ide_npm_globals }}"
         render_desktop_hosts: "{{ (render_cockpit.results[3].content | b64decode | from_yaml)[0].hosts }}"

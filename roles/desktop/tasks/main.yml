@@ -4,9 +4,15 @@
     name: "{{ desktop_packages }}"
     state: present
 
+# ly ships one template unit, not a plain one: upstream res/ly@.service carries
+# Conflicts=getty@%i.service and Alias=autovt@.service, so the TTY is chosen by
+# the instance we enable - and the alias is what makes logind spawn ly instead
+# of getty when that VT is activated. No getty needs disabling by hand.
+# A plain ly.service does not exist: only a live systemd can say so, which is
+# why lint and the render suite waved this through for a whole stage.
 - name: Enable ly on tty2 (starts at next boot - never yank a live TTY)
   ansible.builtin.systemd_service:
-    name: ly.service
+    name: ly@tty2.service
     enabled: true
 
 - name: Create the config directories
